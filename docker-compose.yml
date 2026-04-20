@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb_project_container
+    ports:
+      - "27017:27017" # Map port 27017 ของ container ออกมาที่ port 27017 ของเครื่องคุณ
+    volumes:
+      - mongodb_data:/data/db # เก็บข้อมูลไว้แม้ container จะถูกลบ (Persistent Data)
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin # กำหนด Username สำหรับ Root
+      MONGO_INITDB_ROOT_PASSWORD: password123 # กำหนด Password สำหรับ Root
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo_express_container
+    restart: always
+    ports:
+      - "8081:8081" # Map port สำหรับหน้าเว็บ Mongo Express
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: password123
+      ME_CONFIG_MONGODB_URL: mongodb://admin:password123@mongodb:27017/
+      ME_CONFIG_BASICAUTH: "false" # ปิดหน้าต่าง Login เข้าเว็บเพื่อความสะดวก
+    depends_on:
+      - mongodb # บังคับให้ mongodb รันก่อน
+
+volumes:
+  mongodb_data:
