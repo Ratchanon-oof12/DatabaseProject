@@ -1,255 +1,246 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import NavItem from '../components/NavItem';
+import { getUser, clearUser, authHeaders } from '../utils/auth';
 
-// --- Placeholder Data ---
-const trendingPosts = [
-  {
-    id: 1, category: 'Tech', title: 'The Minimalist Workspace: A 2024 Review',
-    excerpt: 'Exploring the essential tools for a clutter-free desk setup that actually boosts productivity without breaking the bank.',
-    author: 'Alex River', likes: '1.2k',
-    img: 'https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=600&q=80',
-    avatar: 'https://i.pravatar.cc/40?img=11',
-  },
-  {
-    id: 2, category: 'Lifestyle', title: 'Finding the Perfect Morning Ritual',
-    excerpt: 'Why the slow pour-over method might be the exact mindfulness practice your chaotic mornings are missing.',
-    author: 'Emma Hayes', likes: '856',
-    img: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80',
-    avatar: 'https://i.pravatar.cc/40?img=5',
-  },
-  {
-    id: 3, category: 'Design', title: 'The Evolution of Sneaker Silhouettes',
-    excerpt: 'How industrial design principles are reshaping the footwear industry, one chunky sole at a time.',
-    author: 'David Chen', likes: '742',
-    img: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80',
-    avatar: 'https://i.pravatar.cc/40?img=8',
-  },
-];
-
-const feedPosts = [
-  {
-    id: 4, category: 'Architecture', categoryColor: 'text-tertiary', time: '2 hours ago',
-    title: 'Brutalism is Making a Soft Return',
-    excerpt: 'An architectural review of how harsh concrete structures are being softened by modern interior design trends and lush indoor landscaping.',
-    author: 'Emma Hayes', role: 'Architecture Critic',
-    img: 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600&q=80',
-    avatar: 'https://i.pravatar.cc/40?img=5',
-  },
-];
-
-// --- NavItem Component ---
-function NavItem({ icon, label, active, collapsed, to }) {
-  return (
-    <Link
-      to={to || '#'}
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl mx-2 transition-all duration-300
-        ${active
-          ? 'neo-pressed text-primary scale-[0.98]'
-          : 'text-secondary hover:text-on-surface hover:neo-raised'
-        }
-        ${collapsed ? 'justify-center' : ''}
-      `}
-    >
-      <span className="material-symbols-outlined flex-shrink-0" style={{ fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0" }}>
-        {icon}
-      </span>
-      {!collapsed && <span className="text-sm font-medium whitespace-nowrap">{label}</span>}
-    </Link>
-  );
-}
+const API = 'http://localhost:3000/api';
+const CATEGORIES = ['Tech', 'Lifestyle', 'Design', 'Architecture', 'Food', 'Travel', 'Other'];
 
 export default function Feed() {
+  const navigate = useNavigate();
+  const currentUser = getUser();
+
   const [collapsed, setCollapsed] = useState(false);
+  const [blogs, setBlogs]         = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState(null);
+  const [deleting, setDeleting]   = useState(null);
+  const [filter, setFilter]       = useState('All');
+
+  const handleLogout = () => { clearUser(); navigate('/login'); };
+
+  const fetchBlogs = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API}/blogs`);
+      if (!res.ok) throw new Error('Failed to fetch blogs');
+      setBlogs(await res.json());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchBlogs(); }, []);
+
+  const handleDelete = async (id, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm('Delete this blog post?')) return;
+    setDeleting(id);
+    try {
+      const res = await fetch(`${API}/blogs/${id}`, { method: 'DELETE', headers: authHeaders() });
+      if (res.status === 403) throw new Error('You do not own this post');
+      if (!res.ok) throw new Error('Delete failed');
+      setBlogs(prev => prev.filter(b => b._id !== id));
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const allCategories = ['All', ...CATEGORIES];
+  const displayed  = filter === 'All' ? blogs : blogs.filter(b => b.category === filter);
+  const published  = displayed.filter(b => b.status === 'published');
+  const drafts     = displayed.filter(b => b.status === 'draft');
+
+  const isOwner = (post) => currentUser && post.authorId === currentUser._id;
+
+  const BlogCard = ({ post }) => (
+    <Link to={`/blog/${post._id}`} className="group">
+      <article className={`bg-surface rounded-xl p-5 neo-raised flex flex-col h-full transition-all duration-200 hover:scale-[1.01] ${post.status === 'draft' ? 'opacity-70' : ''}`}>
+        {post.coverImage && (
+          <div className="h-44 rounded-lg overflow-hidden mb-4 neo-pressed p-1">
+            <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover rounded-md group-hover:scale-105 transition-transform duration-500" onError={e => e.target.style.display='none'} />
+          </div>
+        )}
+        <div className="flex items-center justify-between mb-2">
+          <span className="px-3 py-0.5 rounded-full neo-raised text-xs font-bold text-primary">{post.category}</span>
+          <div className="flex items-center gap-2">
+            {post.status === 'draft' && <span className="px-2 py-0.5 rounded-full neo-pressed text-xs font-medium text-secondary">Draft</span>}
+            <span className="text-xs text-secondary">{new Date(post.createdAt).toLocaleDateString()}</span>
+          </div>
+        </div>
+        <h3 className="font-headline font-bold text-base leading-tight mb-1 text-on-surface group-hover:text-primary transition-colors line-clamp-2">{post.title}</h3>
+        <p className="text-xs text-secondary line-clamp-2 mb-4 flex-1">{post.excerpt}</p>
+        <div className="flex items-center justify-between pt-3 border-t border-outline-variant/30">
+          <div>
+            <span className="text-xs font-medium text-on-surface-variant">{post.author}</span>
+            {isOwner(post) && (
+              <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary">You</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1 text-secondary text-xs">
+              <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>favorite</span>
+              {post.likes}
+            </span>
+            {/* Only owner sees Edit/Delete */}
+            {isOwner(post) && (
+              <>
+                <button
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); navigate(`/edit/${post._id}`); }}
+                  className="w-7 h-7 rounded-full neo-raised flex items-center justify-center text-secondary hover:text-primary transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[14px]">edit</span>
+                </button>
+                <button
+                  onClick={e => handleDelete(post._id, e)}
+                  disabled={deleting === post._id}
+                  className="w-7 h-7 rounded-full neo-raised flex items-center justify-center text-secondary hover:text-error transition-colors disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[14px]">{deleting === post._id ? 'progress_activity' : 'delete'}</span>
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </article>
+    </Link>
+  );
 
   return (
     <div className="font-body text-on-surface antialiased bg-background min-h-screen flex">
 
-      {/* ── Sidebar (Desktop) ── */}
-      <aside
-        className={`hidden md:flex flex-col fixed left-0 top-0 h-full z-50 bg-surface transition-all duration-300 ease-in-out
-          rounded-r-3xl neo-raised overflow-hidden
-          ${collapsed ? 'w-20' : 'w-64'}
-        `}
-      >
-        {/* Logo / Brand */}
+      {/* ── Sidebar ── */}
+      <aside className={`hidden md:flex flex-col fixed left-0 top-0 h-full z-50 bg-surface transition-all duration-300 ease-in-out rounded-r-3xl neo-raised overflow-hidden ${collapsed ? 'w-20' : 'w-64'}`}>
         <div className={`flex items-center gap-3 px-5 py-6 ${collapsed ? 'justify-center' : ''}`}>
           <span className="material-symbols-outlined text-primary text-3xl flex-shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>auto_stories</span>
-          {!collapsed && (
-            <div>
-              <h1 className="text-lg font-bold text-primary leading-none">Silk Reader</h1>
-              <p className="text-xs text-secondary mt-0.5">Neomorphic Blog</p>
-            </div>
-          )}
+          {!collapsed && <div><p className="text-lg font-bold text-primary leading-none">Silk Reader</p><p className="text-xs text-secondary mt-0.5">Blog CRUD Demo</p></div>}
         </div>
-
-        {/* Toggle Button */}
         <div className={`px-3 mb-4 ${collapsed ? 'flex justify-center' : ''}`}>
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="w-9 h-9 rounded-xl neo-raised flex items-center justify-center text-secondary hover:text-primary transition-all duration-200 hover:neo-pressed"
-          >
-            <span className="material-symbols-outlined text-xl">
-              {collapsed ? 'menu_open' : 'menu'}
-            </span>
+          <button onClick={() => setCollapsed(!collapsed)} className="w-9 h-9 rounded-xl neo-raised flex items-center justify-center text-secondary hover:text-primary transition-all hover:neo-pressed">
+            <span className="material-symbols-outlined text-xl">{collapsed ? 'menu_open' : 'menu'}</span>
           </button>
         </div>
-
-        {/* Nav Links */}
+        {/* User card */}
+        {!collapsed && currentUser && (
+          <div className="mx-4 mb-4 px-4 py-3 rounded-xl neo-pressed">
+            <p className="text-sm font-semibold text-on-surface truncate">{currentUser.name}</p>
+            <p className="text-xs text-secondary truncate">{currentUser.email}</p>
+          </div>
+        )}
         <nav className="flex-1 space-y-1 py-2">
-          <NavItem icon="home" label="Feed" active to="/feed" collapsed={collapsed} />
-          <NavItem icon="person" label="Profile" to="/profile" collapsed={collapsed} />
+          <NavItem icon="home"        label="Feed"       active to="/feed"   collapsed={collapsed} />
+          <NavItem icon="edit_square" label="Write Blog" to="/create"        collapsed={collapsed} />
         </nav>
-
-        {/* Bottom: Logout */}
         <div className="pb-6 space-y-1">
-          <NavItem icon="logout" label="Logout" to="/login" collapsed={collapsed} />
+          <NavItem icon="logout" label="Logout" onClick={handleLogout} collapsed={collapsed} />
         </div>
       </aside>
 
-      {/* ── Mobile Top Nav ── */}
+      {/* ── Mobile Nav ── */}
       <nav className="md:hidden fixed top-0 left-0 w-full h-16 flex items-center justify-between px-6 z-40 bg-surface neo-raised">
         <span className="text-lg font-bold text-primary">Silk Reader</span>
         <div className="flex items-center gap-4">
-          <Link to="/feed"><span className="material-symbols-outlined text-secondary hover:text-primary transition-colors">home</span></Link>
-          <Link to="/profile"><span className="material-symbols-outlined text-secondary hover:text-primary transition-colors">person</span></Link>
-          <Link to="/login"><span className="material-symbols-outlined text-secondary hover:text-primary transition-colors">logout</span></Link>
+          <Link to="/feed"><span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>home</span></Link>
+          <Link to="/create"><span className="material-symbols-outlined text-secondary hover:text-primary transition-colors">edit_square</span></Link>
+          <button onClick={handleLogout}><span className="material-symbols-outlined text-secondary hover:text-primary transition-colors">logout</span></button>
         </div>
       </nav>
 
-      {/* ── Main Content ── */}
+      {/* ── Main ── */}
       <main className={`flex-1 transition-all duration-300 pt-20 md:pt-10 pb-10 px-6 overflow-y-auto ${collapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="max-w-6xl mx-auto page-enter">
 
-          {/* Desktop Header */}
-          <div className="hidden md:flex justify-between items-center mb-10">
-            <div className="relative w-96">
-              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-secondary">search</span>
-              <input
-                className="w-full pl-12 pr-4 py-3 bg-surface border-none rounded-xl neo-pressed focus:ring-0 focus:outline-none text-sm font-medium placeholder:text-secondary text-on-surface"
-                placeholder="Search blogs, authors..."
-                type="text"
-              />
-            </div>
-            <div className="flex items-center gap-4">
-              <button className="w-10 h-10 rounded-full neo-raised flex items-center justify-center text-secondary hover:text-primary transition-colors">
-                <span className="material-symbols-outlined">notifications</span>
-              </button>
-              <Link to="/profile" className="flex items-center gap-3 bg-surface neo-raised px-4 py-2 rounded-xl cursor-pointer hover:neo-pressed transition-all">
-                <img src="https://i.pravatar.cc/40?img=47" alt="User" className="w-8 h-8 rounded-full object-cover" />
-                <span className="text-sm font-semibold">Sarah Jenkins</span>
-                <span className="material-symbols-outlined text-secondary text-sm">expand_more</span>
-              </Link>
-            </div>
-          </div>
-
-          {/* Trending Section */}
-          <div className="flex justify-between items-end mb-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
-              <h2 className="text-2xl font-headline font-bold text-on-surface">Trending Reviews</h2>
-              <p className="text-on-surface-variant text-sm mt-1">What the community is reading right now</p>
+              <h2 className="text-3xl font-headline font-bold text-on-surface">Blog Feed</h2>
+              <p className="text-secondary text-sm mt-1">{blogs.length} post{blogs.length !== 1 ? 's' : ''} in database</p>
             </div>
-            <button className="text-primary text-sm font-semibold hover:text-tertiary transition-colors">View All</button>
+            <button
+              onClick={() => navigate('/create')}
+              className="flex items-center gap-2 px-5 py-3 bg-surface neo-raised text-primary font-semibold rounded-xl hover:neo-pressed transition-all hover:text-tertiary active:scale-95"
+            >
+              <span className="material-symbols-outlined text-lg">add</span>
+              New Post
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {trendingPosts.map(post => (
-              <article key={post.id} className="bg-surface rounded-xl p-5 neo-raised flex flex-col group cursor-pointer">
-                <div className="h-48 rounded-lg overflow-hidden mb-4 relative neo-pressed p-1">
-                  <img src={post.img} alt={post.title} className="w-full h-full object-cover rounded-md group-hover:scale-105 transition-transform duration-500" />
-                  <div className="absolute top-3 left-3 bg-surface/90 backdrop-blur-sm px-3 py-1 rounded-full neo-raised text-xs font-bold text-primary">{post.category}</div>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-headline font-bold text-lg leading-tight mb-2 text-on-surface group-hover:text-primary transition-colors">{post.title}</h3>
-                  <p className="text-sm text-secondary line-clamp-2 mb-4">{post.excerpt}</p>
-                </div>
-                <div className="flex items-center justify-between mt-auto pt-4 border-t border-outline-variant/30">
-                  <div className="flex items-center gap-2">
-                    <img src={post.avatar} alt={post.author} className="w-6 h-6 rounded-full object-cover" />
-                    <span className="text-xs font-medium text-on-surface">{post.author}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-secondary text-xs">
-                    <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>favorite</span>
-                    <span>{post.likes}</span>
-                  </div>
-                </div>
-              </article>
+          {/* Category Filter */}
+          <div className="flex gap-2 flex-wrap mb-8">
+            {allCategories.map(cat => (
+              <button key={cat} onClick={() => setFilter(cat)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${filter === cat ? 'neo-pressed text-primary' : 'neo-raised text-secondary hover:text-primary'}`}>
+                {cat}
+              </button>
             ))}
           </div>
 
-          {/* Recent Updates Section */}
-          <div className="flex justify-between items-end mb-6">
-            <div>
-              <h2 className="text-2xl font-headline font-bold text-on-surface">Recent Updates</h2>
-              <p className="text-secondary text-sm mt-1">The latest thoughts from creators you follow</p>
-            </div>
-            <div className="hidden md:flex gap-3">
-              <button className="bg-surface neo-pressed text-primary px-4 py-1.5 rounded-full text-sm font-semibold">For You</button>
-              <button className="bg-surface neo-raised text-secondary px-4 py-1.5 rounded-full text-sm font-medium hover:text-primary transition-colors">Following</button>
-              <button className="bg-surface neo-raised text-secondary px-4 py-1.5 rounded-full text-sm font-medium hover:text-primary transition-colors">Saved</button>
-            </div>
-          </div>
-
-          {/* Feed Bento Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              {feedPosts.map(post => (
-                <article key={post.id} className="bg-surface rounded-xl p-5 neo-raised flex flex-col md:flex-row gap-5 group cursor-pointer">
-                  <div className="w-full md:w-1/3 h-48 md:h-auto rounded-lg overflow-hidden relative neo-pressed p-1 shrink-0">
-                    <img src={post.img} alt={post.title} className="w-full h-full object-cover rounded-md group-hover:scale-105 transition-transform duration-500" />
-                  </div>
-                  <div className="flex flex-col flex-1 py-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className={`bg-surface px-3 py-1 rounded-full neo-raised text-xs font-bold ${post.categoryColor}`}>{post.category}</div>
-                      <span className="text-xs text-secondary">{post.time}</span>
-                    </div>
-                    <h3 className="font-headline font-bold text-xl leading-tight mb-2 text-on-surface group-hover:text-primary transition-colors">{post.title}</h3>
-                    <p className="text-sm text-secondary mb-4">{post.excerpt}</p>
-                    <div className="flex items-center justify-between mt-auto pt-4">
-                      <div className="flex items-center gap-3">
-                        <img src={post.avatar} alt={post.author} className="w-8 h-8 rounded-full object-cover neo-raised" />
-                        <div>
-                          <div className="text-sm font-semibold text-on-surface">{post.author}</div>
-                          <div className="text-xs text-secondary">{post.role}</div>
-                        </div>
-                      </div>
-                      <div className="flex gap-3">
-                        <button className="w-8 h-8 rounded-full neo-raised flex items-center justify-center text-secondary hover:text-primary transition-colors">
-                          <span className="material-symbols-outlined text-[18px]">bookmark_border</span>
-                        </button>
-                        <button className="w-8 h-8 rounded-full neo-raised flex items-center justify-center text-secondary hover:text-primary transition-colors">
-                          <span className="material-symbols-outlined text-[18px]">share</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-
-            {/* Sidebar Widget */}
-            <div className="space-y-6">
-              <div className="bg-surface rounded-xl p-6 neo-raised text-center">
-                <div className="w-20 h-20 mx-auto rounded-full neo-pressed p-1 mb-4">
-                  <img src="https://i.pravatar.cc/80?img=47" alt="User" className="w-full h-full rounded-full object-cover" />
-                </div>
-                <h4 className="font-headline font-bold text-lg text-on-surface mb-1">Sarah Jenkins</h4>
-                <p className="text-xs text-secondary mb-5">Premium Member</p>
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-surface rounded-lg p-3 neo-pressed">
-                    <div className="text-xl font-bold text-primary mb-1">12</div>
-                    <div className="text-xs text-secondary">Articles Read</div>
-                  </div>
-                  <div className="bg-surface rounded-lg p-3 neo-pressed">
-                    <div className="text-xl font-bold text-tertiary mb-1">5</div>
-                    <div className="text-xs text-secondary">Saved Items</div>
-                  </div>
-                </div>
-                <Link to="/profile" className="block w-full py-2.5 bg-surface rounded-lg neo-raised text-primary font-semibold text-sm hover:neo-pressed transition-all">
-                  View Full Profile
-                </Link>
+          {/* Loading */}
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-24 gap-4">
+              <div className="w-12 h-12 rounded-full neo-raised flex items-center justify-center">
+                <span className="material-symbols-outlined text-primary animate-spin">progress_activity</span>
               </div>
+              <p className="text-secondary text-sm">Loading from MongoDB...</p>
             </div>
-          </div>
+          )}
+
+          {/* Error */}
+          {error && !loading && (
+            <div className="flex flex-col items-center justify-center py-24 gap-4">
+              <div className="w-14 h-14 rounded-2xl neo-pressed flex items-center justify-center">
+                <span className="material-symbols-outlined text-error text-3xl">wifi_off</span>
+              </div>
+              <p className="text-on-surface font-semibold">Can't reach the backend</p>
+              <p className="text-secondary text-sm">{error}</p>
+              <button onClick={fetchBlogs} className="mt-2 px-5 py-2.5 neo-raised text-primary font-semibold rounded-xl hover:neo-pressed transition-all text-sm">Retry</button>
+            </div>
+          )}
+
+          {/* Empty */}
+          {!loading && !error && displayed.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-24 gap-4">
+              <div className="w-14 h-14 rounded-2xl neo-pressed flex items-center justify-center">
+                <span className="material-symbols-outlined text-secondary text-3xl">article</span>
+              </div>
+              <p className="text-on-surface font-semibold">No posts yet</p>
+              <button onClick={() => navigate('/create')} className="mt-2 px-5 py-2.5 neo-raised text-primary font-semibold rounded-xl hover:neo-pressed transition-all text-sm flex items-center gap-2">
+                <span className="material-symbols-outlined text-base">add</span>Create First Post
+              </button>
+            </div>
+          )}
+
+          {/* Published */}
+          {!loading && !error && published.length > 0 && (
+            <>
+              <div className="flex justify-between items-end mb-4">
+                <h3 className="text-xl font-headline font-bold text-on-surface">Published</h3>
+                <span className="text-sm text-secondary">{published.length} post{published.length !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+                {published.map(post => <BlogCard key={post._id} post={post} />)}
+              </div>
+            </>
+          )}
+
+          {/* Drafts */}
+          {!loading && !error && drafts.length > 0 && (
+            <>
+              <div className="flex justify-between items-end mb-4">
+                <h3 className="text-xl font-headline font-bold text-on-surface">Drafts</h3>
+                <span className="text-sm text-secondary">{drafts.length} draft{drafts.length !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {drafts.map(post => <BlogCard key={post._id} post={post} />)}
+              </div>
+            </>
+          )}
 
         </div>
       </main>
