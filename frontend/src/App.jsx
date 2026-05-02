@@ -6,6 +6,8 @@ import Feed       from './pages/Feed';
 import BlogPost   from './pages/BlogPost';
 import CreateBlog from './pages/CreateBlog';
 
+import ForgotPassword from './pages/ForgotPassword';
+
 function ProtectedRoute({ children }) {
   return isLoggedIn() ? children : <Navigate to="/login" replace />;
 }
@@ -14,8 +16,10 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login"    element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route path="/login"           element={<Login />} />
+        <Route path="/register"        element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+
 
         <Route path="/feed"     element={<ProtectedRoute><Feed /></ProtectedRoute>} />
         <Route path="/blog/:id" element={<ProtectedRoute><BlogPost /></ProtectedRoute>} />

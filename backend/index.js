@@ -25,14 +25,12 @@ const userSchema = new mongoose.Schema({
   name:     { type: String, required: true },
   email:    { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
-  bio:      { type: String, default: '' },
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
 
 const blogSchema = new mongoose.Schema({
   title:      { type: String, required: true },
-  slug:       { type: String, required: true, unique: true },
   author:     { type: String, required: true },
   authorId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   category:   { type: String, required: true },
@@ -86,6 +84,25 @@ app.post('/api/auth/login', async (req, res) => {
     // Return user without the password field
     const { password: _, ...safeUser } = user.toObject();
     res.status(200).json(safeUser);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Reset Password — direct reset for demo purposes
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+    if (!email || !newPassword) return res.status(400).json({ error: 'Email and new password are required' });
+    
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) return res.status(404).json({ error: 'No account found with that email' });
+    
+    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    user.password = hashedPassword;
+    await user.save();
+    
+    res.status(200).json({ message: 'Password updated successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

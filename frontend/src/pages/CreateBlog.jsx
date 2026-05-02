@@ -6,17 +6,9 @@ import { getUser, clearUser, authHeaders } from '../utils/auth';
 const API = 'http://localhost:3000/api';
 const CATEGORIES = ['Tech', 'Lifestyle', 'Design', 'Architecture', 'Food', 'Travel', 'Other'];
 
-function slugify(text) {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
-}
 
 const EMPTY_FORM = {
-  title: '', slug: '', author: '', category: 'Tech',
+  title: '', author: '', category: 'Tech',
   content: '', excerpt: '', coverImage: '', status: 'published',
 };
 
@@ -32,7 +24,6 @@ export default function CreateBlog() {
   const [loading, setLoading]     = useState(isEditing);
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState(null);
-  const [slugManual, setSlugManual] = useState(false);
   const handleLogout = () => { clearUser(); navigate('/login'); };
 
   // Load existing post when editing
@@ -45,7 +36,6 @@ export default function CreateBlog() {
         const data = await res.json();
         setForm({
           title:      data.title,
-          slug:       data.slug,
           author:     data.author,
           category:   data.category,
           content:    data.content,
@@ -53,7 +43,6 @@ export default function CreateBlog() {
           coverImage: data.coverImage || '',
           status:     data.status,
         });
-        setSlugManual(true);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -65,15 +54,7 @@ export default function CreateBlog() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(prev => {
-      const updated = { ...prev, [name]: value };
-      // Auto-generate slug from title unless user manually changed it
-      if (name === 'title' && !slugManual) {
-        updated.slug = slugify(value);
-      }
-      if (name === 'slug') setSlugManual(true);
-      return updated;
-    });
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -196,17 +177,7 @@ export default function CreateBlog() {
                     <input id="title" name="title" type="text" required value={form.title} onChange={handleChange} placeholder="Enter your blog title..." className={fieldClass} />
                   </div>
 
-                  {/* Slug */}
-                  <div>
-                    <label className={labelClass} htmlFor="slug">
-                      Slug *
-                      <span className="ml-2 text-xs font-normal text-secondary/60">(auto-generated from title)</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-xs font-mono">/blog/</span>
-                      <input id="slug" name="slug" type="text" required value={form.slug} onChange={handleChange} placeholder="my-blog-post" className={`${fieldClass} pl-14`} />
-                    </div>
-                  </div>
+
 
                   {/* Author + Category (2 col) */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

@@ -55,7 +55,6 @@ DatabaseProject/
 | `name` | String | ชื่อผู้ใช้ (required) |
 | `email` | String | unique, lowercase (required) |
 | `password` | String | bcrypt hash (required) |
-| `bio` | String | ประวัติย่อ (optional) |
 | `createdAt` | Date | Auto |
 | `updatedAt` | Date | Auto |
 
@@ -65,7 +64,6 @@ DatabaseProject/
 |-------|------|---------|
 | `_id` | ObjectId | Auto-generated |
 | `title` | String | ชื่อบล็อก (required) |
-| `slug` | String | unique, URL-friendly (required) |
 | `author` | String | ชื่อผู้เขียน (required) |
 | `authorId` | ObjectId | อ้างอิงไปยัง `users._id` |
 | `category` | String | หมวดหมู่ (required) |

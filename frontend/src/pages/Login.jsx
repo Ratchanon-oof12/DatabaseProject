@@ -98,6 +98,11 @@ export default function Login() {
                 className="block w-full pl-12 pr-4 py-4 bg-surface border-transparent rounded-xl text-on-surface placeholder-secondary focus:border-transparent focus:ring-0 neo-pressed transition-shadow text-base"
               />
             </div>
+            <div className="flex justify-end mt-2">
+              <Link to="/forgot-password" className="text-sm font-medium text-secondary hover:text-primary transition-colors">
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           <div className="pt-2">
