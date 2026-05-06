@@ -71,7 +71,7 @@ DatabaseProject/
 | `excerpt` | String | บทสรุปย่อ (required) |
 | `coverImage` | String | URL รูปปก (optional) |
 | `status` | String | `"published"` หรือ `"draft"` |
-| `likes` | Number | จำนวน Like (default: 0) |
+| `likedBy` | [ObjectId] | รายการ user ที่กด Like (ref → users) |
 | `createdAt` | Date | Auto |
 | `updatedAt` | Date | Auto |
 
@@ -180,16 +180,14 @@ npm run dev
 | `POST` | `/api/blogs` | `X-User-Id` | สร้างบล็อกใหม่ |
 | `PUT` | `/api/blogs/:id` | `X-User-Id` (เจ้าของเท่านั้น) | แก้ไขบล็อก |
 | `DELETE` | `/api/blogs/:id` | `X-User-Id` (เจ้าของเท่านั้น) | ลบบล็อก |
-| `PATCH` | `/api/blogs/:id/like` | — | เพิ่ม Like |
+| `PATCH` | `/api/blogs/:id/like` | `X-User-Id` | Toggle Like (กด Like / Unlike) |
 
 ### ตัวอย่าง Request Body — สร้างบล็อก
 
 ```json
 {
   "title": "ชื่อบล็อก",
-  "slug": "blog-slug",
   "author": "ชื่อผู้เขียน",
-  "authorId": "<user _id>",
   "category": "Tech",
   "content": "เนื้อหาบล็อก...",
   "excerpt": "บทสรุปสั้นๆ",
@@ -197,6 +195,8 @@ npm run dev
   "status": "published"
 }
 ```
+
+> `authorId` และ `likedBy` จะถูก backend ใส่ให้อัตโนมัติ ไม่ต้องส่งมาใน body
 
 ---
 
