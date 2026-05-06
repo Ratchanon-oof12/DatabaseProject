@@ -38,7 +38,7 @@ const blogSchema = new mongoose.Schema({
   excerpt:    { type: String, required: true },
   coverImage: { type: String, default: '' },
   status:     { type: String, enum: ['draft', 'published'], default: 'published' },
-  likes:      { type: Number, default: 0 },
+  likedBy:    [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 }, { timestamps: true });
 
 const Blog = mongoose.model('Blog', blogSchema);
@@ -244,15 +244,26 @@ app.delete('/api/blogs/:id', async (req, res) => {
   }
 });
 
-// PATCH increment likes (any logged-in user)
+// PATCH toggle like (any logged-in user, once per user)
 app.patch('/api/blogs/:id/like', async (req, res) => {
   try {
-    const blog = await Blog.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { likes: 1 } },
-      { new: true }
-    );
+    const userId = req.headers['x-user-id'];
+    if (!userId) return res.status(401).json({ error: 'Unauthorized: please log in' });
+
+    const blog = await Blog.findById(req.params.id);
     if (!blog) return res.status(404).json({ error: 'Blog not found' });
+
+    const alreadyLiked = blog.likedBy.some(id => id.toString() === userId);
+
+    if (alreadyLiked) {
+      // Unlike — remove user from array
+      blog.likedBy.pull(userId);
+    } else {
+      // Like — add user to array
+      blog.likedBy.push(userId);
+    }
+
+    await blog.save();
     res.status(200).json(blog);
   } catch (err) {
     res.status(500).json({ error: err.message });

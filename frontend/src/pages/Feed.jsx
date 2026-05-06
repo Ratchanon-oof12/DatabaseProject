@@ -61,7 +61,7 @@ export default function Feed() {
 
   const BlogCard = ({ post }) => (
     <Link to={`/blog/${post._id}`} className="group">
-      <article className={`bg-surface rounded-xl p-5 neo-raised flex flex-col h-full transition-all duration-200 hover:scale-[1.01] ${post.status === 'draft' ? 'opacity-70' : ''}`}>
+      <article className={`bg-surface rounded-xl p-5 neo-raised flex flex-col h-full transition-all duration-200 hover:scale-[1.01] overflow-hidden ${post.status === 'draft' ? 'opacity-70' : ''}`}>
         {post.coverImage && (
           <div className="h-44 rounded-lg overflow-hidden mb-4 neo-pressed p-1">
             <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover rounded-md group-hover:scale-105 transition-transform duration-500" onError={e => e.target.style.display='none'} />
@@ -74,8 +74,8 @@ export default function Feed() {
             <span className="text-xs text-secondary">{new Date(post.createdAt).toLocaleDateString()}</span>
           </div>
         </div>
-        <h3 className="font-headline font-bold text-base leading-tight mb-1 text-on-surface group-hover:text-primary transition-colors line-clamp-2">{post.title}</h3>
-        <p className="text-xs text-secondary line-clamp-2 mb-4 flex-1">{post.excerpt}</p>
+        <h3 className="font-headline font-bold text-base leading-tight mb-1 text-on-surface group-hover:text-primary transition-colors line-clamp-2 break-all">{post.title}</h3>
+        <p className="text-xs text-secondary line-clamp-2 mb-4 flex-1 break-all">{post.excerpt}</p>
         <div className="flex items-center justify-between pt-3 border-t border-outline-variant/30">
           <div>
             <span className="text-xs font-medium text-on-surface-variant">{post.author}</span>
@@ -86,7 +86,7 @@ export default function Feed() {
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1 text-secondary text-xs">
               <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>favorite</span>
-              {post.likes}
+              {post.likedBy?.length || 0}
             </span>
             {/* Only owner sees Edit/Delete */}
             {isOwner(post) && (
@@ -117,10 +117,10 @@ export default function Feed() {
 
       {/* ── Sidebar ── */}
       <aside className={`hidden md:flex flex-col fixed left-0 top-0 h-full z-50 bg-surface transition-all duration-300 ease-in-out rounded-r-3xl neo-raised overflow-hidden ${collapsed ? 'w-20' : 'w-64'}`}>
-        <div className={`flex items-center gap-3 px-5 py-6 ${collapsed ? 'justify-center' : ''}`}>
+        <Link to="/feed" className={`flex items-center gap-3 px-5 py-6 cursor-pointer hover:opacity-80 transition-opacity ${collapsed ? 'justify-center' : ''}`}>
           <span className="material-symbols-outlined text-primary text-3xl flex-shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>auto_stories</span>
           {!collapsed && <div><p className="text-lg font-bold text-primary leading-none">Silk Reader</p><p className="text-xs text-secondary mt-0.5">Blog CRUD Demo</p></div>}
-        </div>
+        </Link>
         <div className={`px-3 mb-4 ${collapsed ? 'flex justify-center' : ''}`}>
           <button onClick={() => setCollapsed(!collapsed)} className="w-9 h-9 rounded-xl neo-raised flex items-center justify-center text-secondary hover:text-primary transition-all hover:neo-pressed">
             <span className="material-symbols-outlined text-xl">{collapsed ? 'menu_open' : 'menu'}</span>

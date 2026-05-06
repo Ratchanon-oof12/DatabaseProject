@@ -14,12 +14,13 @@ export default function BlogPost() {
   const [blog, setBlog]             = useState(null);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState(null);
-  const [liked, setLiked]           = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const [deleting, setDeleting]     = useState(false);
 
   const handleLogout = () => { clearUser(); navigate('/login'); };
   const isOwner = blog && currentUser && blog.authorId === currentUser._id;
+  const liked = blog && currentUser && blog.likedBy?.includes(currentUser._id);
+  const likeCount = blog?.likedBy?.length || 0;
 
   useEffect(() => {
     const fetchBlog = async () => {
@@ -35,11 +36,10 @@ export default function BlogPost() {
   }, [id]);
 
   const handleLike = async () => {
-    if (liked) return;
     try {
       const res = await fetch(`${API}/blogs/${id}/like`, { method: 'PATCH', headers: authHeaders() });
       if (!res.ok) throw new Error('Like failed');
-      setBlog(await res.json()); setLiked(true);
+      setBlog(await res.json());
     } catch (err) { alert(err.message); }
   };
 
@@ -59,10 +59,10 @@ export default function BlogPost() {
 
       {/* Sidebar */}
       <aside className={`hidden md:flex flex-col fixed left-0 top-0 h-full z-50 bg-surface transition-all duration-300 ease-in-out rounded-r-3xl neo-raised overflow-hidden ${collapsed ? 'w-20' : 'w-64'}`}>
-        <div className={`flex items-center gap-3 px-5 py-6 ${collapsed ? 'justify-center' : ''}`}>
+        <Link to="/feed" className={`flex items-center gap-3 px-5 py-6 cursor-pointer hover:opacity-80 transition-opacity ${collapsed ? 'justify-center' : ''}`}>
           <span className="material-symbols-outlined text-primary text-3xl flex-shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>auto_stories</span>
           {!collapsed && <div><p className="text-lg font-bold text-primary leading-none">Silk Reader</p><p className="text-xs text-secondary mt-0.5">Blog CRUD Demo</p></div>}
-        </div>
+        </Link>
         <div className={`px-3 mb-4 ${collapsed ? 'flex justify-center' : ''}`}>
           <button onClick={() => setCollapsed(!collapsed)} className="w-9 h-9 rounded-xl neo-raised flex items-center justify-center text-secondary hover:text-primary transition-all hover:neo-pressed">
             <span className="material-symbols-outlined text-xl">{collapsed ? 'menu_open' : 'menu'}</span>
@@ -157,15 +157,15 @@ export default function BlogPost() {
                 </div>
               )}
 
-              <article className="bg-surface rounded-3xl neo-raised p-6 sm:p-10">
+              <article className="bg-surface rounded-3xl neo-raised p-6 sm:p-10 overflow-hidden">
                 <header className="mb-10 text-center">
                   <div className="flex items-center justify-center gap-2 mb-4">
                     <span className="px-4 py-1.5 rounded-full neo-pressed text-xs font-semibold text-primary uppercase tracking-wider">{blog.category}</span>
                     {blog.status === 'draft' && <span className="px-3 py-1 rounded-full neo-raised text-xs font-semibold text-secondary uppercase">Draft</span>}
                     {isOwner && <span className="px-3 py-1 rounded-full bg-primary/10 text-xs font-semibold text-primary">Your post</span>}
                   </div>
-                  <h1 className="text-3xl sm:text-4xl font-headline font-semibold text-on-surface leading-tight mb-4">{blog.title}</h1>
-                  <p className="text-lg text-secondary max-w-2xl mx-auto mb-8 leading-relaxed">{blog.excerpt}</p>
+                  <h1 className="text-3xl sm:text-4xl font-headline font-semibold text-on-surface leading-tight mb-4 break-all">{blog.title}</h1>
+                  <p className="text-lg text-secondary max-w-2xl mx-auto mb-8 leading-relaxed break-all">{blog.excerpt}</p>
                   <div className="flex justify-center">
                     <div className="flex items-center gap-3 px-4 py-2 rounded-2xl neo-raised text-sm font-medium text-on-surface-variant flex-wrap justify-center">
                       <span className="font-semibold text-on-surface">{blog.author}</span>
@@ -188,7 +188,7 @@ export default function BlogPost() {
 
                 <div className="max-w-3xl mx-auto">
                   {blog.content.split('\n\n').map((para, i) => (
-                    <p key={i} className="text-base text-secondary leading-loose mb-6">{para}</p>
+                    <p key={i} className="text-base text-secondary leading-loose mb-6 break-all">{para}</p>
                   ))}
                 </div>
 
@@ -198,7 +198,7 @@ export default function BlogPost() {
                     className={`flex items-center gap-2 px-6 py-3 rounded-full neo-raised font-medium transition-all ${liked ? 'text-red-500 neo-pressed' : 'text-primary hover:neo-pressed'}`}
                   >
                     <span className="material-symbols-outlined" style={{ fontVariationSettings: liked ? "'FILL' 1" : "'FILL' 0" }}>favorite</span>
-                    <span>{blog.likes} Like{blog.likes !== 1 ? 's' : ''}</span>
+                    <span>{likeCount} Like{likeCount !== 1 ? 's' : ''}</span>
                   </button>
                   <div className="flex items-center gap-2 text-xs text-secondary">
                     <span className="material-symbols-outlined text-sm">database</span>

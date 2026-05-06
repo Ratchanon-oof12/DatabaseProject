@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import NavItem from '../components/NavItem';
 import { getUser, clearUser, authHeaders } from '../utils/auth';
 
@@ -87,7 +87,7 @@ export default function CreateBlog() {
 
       {/* Sidebar */}
       <aside className={`hidden md:flex flex-col fixed left-0 top-0 h-full z-50 bg-surface transition-all duration-300 ease-in-out rounded-r-3xl neo-raised overflow-hidden ${collapsed ? 'w-20' : 'w-64'}`}>
-        <div className={`flex items-center gap-3 px-5 py-6 ${collapsed ? 'justify-center' : ''}`}>
+        <Link to="/feed" className={`flex items-center gap-3 px-5 py-6 cursor-pointer hover:opacity-80 transition-opacity ${collapsed ? 'justify-center' : ''}`}>
           <span className="material-symbols-outlined text-primary text-3xl flex-shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>auto_stories</span>
           {!collapsed && (
             <div>
@@ -95,7 +95,7 @@ export default function CreateBlog() {
               <p className="text-xs text-secondary mt-0.5">Blog CRUD Demo</p>
             </div>
           )}
-        </div>
+        </Link>
         <div className={`px-3 mb-4 ${collapsed ? 'flex justify-center' : ''}`}>
           <button onClick={() => setCollapsed(!collapsed)} className="w-9 h-9 rounded-xl neo-raised flex items-center justify-center text-secondary hover:text-primary transition-all hover:neo-pressed">
             <span className="material-symbols-outlined text-xl">{collapsed ? 'menu_open' : 'menu'}</span>
